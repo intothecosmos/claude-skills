@@ -63,7 +63,7 @@ IREN is an **AI cloud infrastructure company**, NOT a Bitcoin miner. The competi
 - Value the infrastructure platform, not just current earnings
 - Be skeptical by default — require evidence before upgrading thesis
 - Quantify everything — dollar values, probabilities, timelines, payback periods
-- **Epistemic tagging (MANDATORY).** Tag every numeric or factual claim with `[mgmt]` (company press release / earnings transcript / IR site / SEC filing), `[3P]` (independent third-party reporting — name the source: "[3P – Cointelegraph]", "[3P – CNBC]", etc.), or `[unverified]` (heard but not source-checked). `[mgmt]` is not lower-credibility than `[3P]` — they're DIFFERENT evidence types. Management can be self-interested; third-party can be wrong. Tagging surfaces the difference for fast trust-evaluation. Tagging is mandatory in sweep output, brief updates, and dashboard render. Untagged factual claims are not acceptable.
+- **Epistemic tagging (MANDATORY).** Tag every numeric or factual claim with `[mgmt · YYYY-MM-DD]` (company press release / earnings transcript / IR site / SEC filing), `[3P · source · YYYY-MM-DD]` (independent third-party reporting — name the source: "[3P · Cointelegraph · 2026-05-10]", "[3P · CNBC · 2026-05-07]", etc.), or `[unverified · last checked YYYY-MM-DD]` (heard but not source-checked). The date is the date the claim was originally reported (or last verified for `[unverified]`), not the date you read it. For derived/calculated values, date the inputs (e.g., "ARR/GPU = $X [derived from mgmt · 2026-05-07]"). `[mgmt]` is not lower-credibility than `[3P]` — they're DIFFERENT evidence types. Management can be self-interested; third-party can be wrong. Tagging surfaces the difference for fast trust-evaluation. Tagging is mandatory in sweep output, brief updates, and dashboard render. Untagged factual claims are not acceptable. Dateless tags are not acceptable.
 - **Contract type tagging.** When logging or referencing a customer contract, tag as `[capacity]` (genuine revenue-driver, scales with deployment) or `[halo]` (signaling-driver, mostly narrative / validation value, small relative to total capacity). Example: $9.7B Microsoft / 750 MW = `[capacity]`; $3.4B NVIDIA / 60 MW of 2.75 GW total = primarily `[halo]`. The distinction matters for valuation — halo deals support multiple expansion; capacity deals support revenue base.
 
 ---
@@ -230,13 +230,14 @@ Every sweep MUST produce:
 - Regenerate HTML report after brief update
 - Update the "Recent Updates" table (Section 3) with classified findings
 - Update "Monitoring Checklist" (Section 23) with last-run dates
+- **Brief-section freshness stamps (MANDATORY):** every brief section header gets a `Last refresh: YYYY-MM-DD` line directly under it, updated whenever that section's content changes (not just the brief file's mtime). Lets the reader see at a glance which sections are stale vs current. Sections not refreshed during a sweep keep their prior stamp — do NOT bump the stamp without a real content change.
 
 ---
 
 ## Output Standards
 
 - **Tone:** Analytical, skeptical, quantified. No filler. State uncertainty explicitly.
-- **Epistemic tagging (MANDATORY):** Every numeric or factual claim gets `[mgmt]` / `[3P]` / `[unverified]` per Analytical Standards. Every customer contract gets `[capacity]` or `[halo]`. Untagged claims are not acceptable in any output — sweep, brief, dashboard, or summary.
+- **Epistemic tagging (MANDATORY):** Every numeric or factual claim gets `[mgmt · YYYY-MM-DD]` / `[3P · source · YYYY-MM-DD]` / `[unverified · last checked YYYY-MM-DD]` per Analytical Standards (date is when claim was originally reported, not when you saw it). Every customer contract gets `[capacity]` or `[halo]`. Untagged or dateless factual claims are not acceptable in any output — sweep, brief, dashboard, or summary.
 - **Unit Economics Connection:** Every development connects to PUE → GPU density → ARR/GPU → payback → value creation.
 - **GAAP vs Cash:** Earnings updates decompose into 3 layers: GAAP NI, EBITDA/Adjusted EBITDA, Free Cash Flow.
 - **Format:** Markdown, consistent headings, tables for structured data, date-stamped changelog.
