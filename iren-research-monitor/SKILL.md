@@ -287,8 +287,8 @@ Every sweep MUST produce:
 ## Sweep File Management
 
 - Save every sweep to: `IREN Research/sweeps/SWEEP_YYYY-MM-DD.md`
-- After sweep, update the research brief with MATERIAL findings
-- Regenerate HTML report after brief update
+- **Brief updates:** apply MATERIAL findings (thesis-altering) automatically. Also apply NOTABLE findings when they (a) correct a data error in the brief, (b) update a catalyst date / status, (c) refresh a peer-comp row, or (d) close an open question. NOISE-only sweeps do not require brief edits. **The brief is the single source of truth — do not let it drift stale.**
+- **HTML regeneration is MANDATORY whenever ANY brief content changes** — including NOTABLE corrections, catalyst-date slips, peer-comp updates, freshness-stamp bumps that follow content changes. The HTML is the distribution format of the brief; if the markdown changed, the HTML is stale. Run via `iren-html-regenerate`. The ONLY case to skip is when the sweep produced no brief edits at all (pure status-quo confirmations + sweep log only). **Never gate HTML regen on MATERIAL classification alone** — that produces drift between source and distribution.
 - Update the "Recent Updates" table (Section 3) with classified findings
 - Update "Monitoring Checklist" (Section 23) with last-run dates
 - **Brief-section freshness stamps (MANDATORY):** every brief section header gets a `Last refresh: YYYY-MM-DD` line directly under it, updated whenever that section's content changes (not just the brief file's mtime). Lets the reader see at a glance which sections are stale vs current. Sections not refreshed during a sweep keep their prior stamp — do NOT bump the stamp without a real content change.
@@ -311,8 +311,8 @@ Every sweep MUST produce:
 | Task | Frequency | Scope |
 |---|---|---|
 | Full monitoring sweep | Monday & Thursday, 9am | Tiers 1-6 |
-| Update research brief | Monday & Thursday, post-sweep | MATERIAL and TRADE-RELEVANT findings |
-| Regenerate HTML report | Monday & Thursday, post-brief-update | From latest markdown |
+| Update research brief | Monday & Thursday, post-sweep | MATERIAL + any NOTABLE that corrects a data error / updates a catalyst date / refreshes a peer-comp row / closes an open question |
+| Regenerate HTML report | **Whenever brief content changes (ANY edit, ANY classification)** | From latest markdown — keep distribution format in sync with source |
 | Short interest & institutional | Bi-weekly (1st and 15th) | Tier 5 |
 | Unit economics audit | Monthly (1st Monday) | GPU economics, CapEx/MW, PUE |
 | Peer comparable deep dive | Monthly (1st Monday) | Tier 3 + Tier 4 |
