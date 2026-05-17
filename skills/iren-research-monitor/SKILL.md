@@ -68,6 +68,62 @@ IREN is an **AI cloud infrastructure company**, NOT a Bitcoin miner. The competi
 
 ---
 
+## RIGOR FLOOR — No Gaps Until Truly Blocked (MANDATORY)
+
+**The standard: every gap must either (a) close with real data, or (b) be documented as truly blocked with a specific reason** (legal redaction, paywall I genuinely can't bypass, content requiring authentication I don't have). The following are NEVER acceptable as final answers:
+- "Not yet synced to aggregator"
+- "WebFetch returned 403"
+- "Would need to..."
+- "First reads not yet available" (without actually querying)
+- "No fresh data this sweep" (without actually querying)
+- "Calendar logic suggests data won't be there yet"
+
+**Why this is permanent:** the gap I stop at is often the most material data. When a mandated query "returns nothing," the failure is usually in the QUERY method, not the DATA availability. Push through.
+
+### Order of attempts when facing a gap
+
+1. **Primary source first.** SEC EDGAR for filings, IR pages for company-direct info, official APIs over aggregators.
+2. **Bash + curl with proper User-Agent** when WebFetch fails. SEC requires `User-Agent` like `"Personal Research Project (mattdufton@gmail.com)"` — without it, EDGAR returns 403. WebFetch can't set custom UA; curl can.
+3. **Direct XML / JSON over rendered HTML.** Aggregator pages (Fintel, WhaleWisdom, Quiver, Hedgefollow) often have JS-rendered tables invisible to fetch. SEC EDGAR's underlying XML/JSON endpoints are always accessible.
+4. **Search the data structure for the actual answer.** For 13F-HR: the infotable XML (filenames like `*FMRLLC.xml`, `Information_Table_*.xml`) contains every holding. Parse `<infoTable>` regex.
+5. **Check field types.** For 13F entries: `<sshPrnamtType>` distinguishes SH (shares) from PRN (principal $ of converts/bonds). `<putCall>` distinguishes LONG / Call / Put. Misreading creates ghost positions.
+6. **Try alternative entity CIKs.** Big managers (BlackRock, Vanguard, Fidelity) file under multiple CIKs. When parent returns nothing, full-text search SEC for entity name + "13F-HR" in the relevant date range to find the actual filer CIK(s).
+7. **For "paywalled" transcripts, check SEC 8-K exhibits.** Foreign private issuers + many US companies file transcripts as 8-K exhibits (free, public). Filename patterns: `irentranscript.htm`, `transcript.htm`, `earnings_call_transcript.htm`. Look in 8-K filings 2-7 days after earnings.
+8. **Real walls vs imagined walls.**
+   - **Real walls:** SEC Reg S-K 601(a)(6) explicit redactions (capped-call counterparty names), genuinely-private warrant terms before exhibit-filing, Seeking Alpha paid content NOT also SEC-filed.
+   - **Imagined walls:** 403 errors that just mean "wrong UA"; aggregator empty tables that mean "use SEC directly"; "next sweep" that means "I'm tired."
+
+### Workaround Library (verified working — don't re-derive)
+
+| Need | Workaround |
+|------|------------|
+| SEC EDGAR access | `curl -A "Personal Research Project (mattdufton@gmail.com)" "https://data.sec.gov/submissions/CIK0001878848.json"` |
+| Find correct CIK | `curl -A "..." "https://efts.sec.gov/LATEST/search-index?q=%22COMPANY+NAME%22&forms=13F-HR&dateRange=custom&startdt=...&enddt=..."` |
+| 13F info table | Walk `index.json` → find `*.xml` that's NOT `primary_doc.xml` or `index.html` → fetch + parse `<infoTable>` regex |
+| Earnings transcript (free) | Search company's 8-K filings 2-7 days post-earnings for exhibit with "transcript" in filename |
+| Multi-CIK manager (Vanguard, BlackRock, Fidelity) | SEC full-text search for `"IREN LIMITED" + "<MANAGER NAME>"` in 13F-HR within date window — returns ALL sub-CIKs that file |
+| Aggregator empty table | Skip the aggregator; go to SEC directly via methods above |
+| 8-K detail beyond press release | Pull EX-99.1 (PR), EX-4.1 (indentures), EX-10.1 (agreements) directly from `Archives/edgar/data/CIK/ACCESSION/` |
+| IREN-specific identifiers | IREN CIK: **0001878848** (NOT 0001847156 — that's a different LP). IREN 13F CUSIP: **Q4982L109** (ordinary shares) |
+
+### Mandated query enforcement
+
+When a Tier (1-7) or a sweep output #N specifies a query, the correct behavior is to **actually run the search/fetch** — not assume the answer based on calendar logic ("filing deadline is today, probably no data yet") or generic caution.
+
+- On 13F deadline days (Feb 14 / May 15 / Aug 14 / Nov 14), the DATA IS THERE on the deadline day itself, not "starting to appear over the next 2 weeks." Most large managers file ON the deadline.
+- "First reads not yet available" is only acceptable if you ran the query and the data genuinely wasn't there.
+- General rule: the absence of a result is the absence of the QUERY, not the absence of the DATA. Re-attempt with a different method before concluding.
+
+### Verification before relaying
+
+Never relay a subagent's claim or a README's prose as fact without verifying against primary source. Subagent reports + aggregator commentary CAN be wrong. The verification cost is 1-2 commands; the cost of relaying a wrong fact is the entire sweep's credibility.
+
+### Push response
+
+When the user pushes after a sweep ("are you sure?" / "what about X?" / "what other gaps?" / "find solutions, not roadblocks"), treat that as confirmation a gap was missed. Don't defend the prior answer — go deeper. Re-read the prior output looking for hedging language ("not yet", "may", "would need", "could be") and treat each hedge as a gap to close.
+
+---
+
 ## Analytical Lens — Seven Questions for Every Development
 
 **(a) Execution probability** — Construction timelines, energization milestones, GPU deployment pace, power procurement?
@@ -185,6 +241,11 @@ IREN is an **AI cloud infrastructure company**, NOT a Bitcoin miner. The competi
 48. `IREN short interest`
 49. `IREN analyst rating price target`
 
+**Tier 5 execution protocol — DO NOT skip:**
+- For Q-end 13F bi-weeklies (45 days post quarter-end: Feb 14, May 15, Aug 14, Nov 14), Q&A-relevant managers MUST be pulled directly from SEC EDGAR via the Workaround Library (Rigor Floor section). Aggregator-only sweeps are insufficient — Fintel/MarketBeat/WhaleWisdom miss the long tail of institutional decomposition.
+- Mandated managers for direct SEC pull: BlackRock, Vanguard, State Street, Fidelity (FMR), Wellington, Capital Research, Bridgewater, Citadel, Renaissance, Two Sigma, D.E. Shaw, Goldman Sachs (decompose LONG vs put/call), Morgan Stanley (decompose mandate count), JPMorgan, Point72 (check `<sshPrnamtType>` for PRN vs SH).
+- Output classification framework — Quality-of-Flow lens: **fundamental long-only HIGHEST signal** (Capital Research, Wellington, Fidelity, JPMorgan AM) → **discretionary multi-strat MEDIUM** (Citadel, Point72, D.E. Shaw — decompose long vs hedge) → **quant/index LOWEST** (Renaissance, Two Sigma, BlackRock index funds). Absences in HIGHEST tier = quietly bearish.
+
 ### Tier 6 — Earnings & Management Commentary (per sweep; daily during earnings week)
 50. `IREN earnings call transcript`
 51. `IREN investor presentation 2026`
@@ -212,11 +273,11 @@ Every sweep MUST produce:
 9. **Red flag check** — Pass/fail against full list (see Section 13 of brief)
 10. **Thesis-killing condition check** — Pass/fail against every tripwire (Section 14). If ANY fires, flag BEFORE all other output.
 11. **Short interest update** — SI%, days to cover, trend, squeeze assessment
-12. **Institutional ownership update** — New filings; decompose by holder type if changes found
+12. **Institutional ownership update** — New filings; decompose by holder type using Quality-of-Flow lens (fundamental long-only / discretionary multi-strat / quant-index). **On 13F deadline days, the data IS available — use the Workaround Library (Rigor Floor section) to pull mandated managers directly from SEC EDGAR XML, not from aggregators only. Aggregator-only output is insufficient.** Flag absences in fundamental long-only tier as quietly bearish signal.
 13. **Energy cost snapshot** — ERCOT, nat gas, Brent vs last sweep. Include margin impact math.
 14. **Trading dashboard flag** — Note TRADE-RELEVANT findings but do NOT include trade construction.
 15. **Next-gen GPU update** — Rubin timeline, pricing, supply signals
-16. **Gap assessment** — What would a hedge fund PM want that we couldn't find? For each gap: (a) what's missing, (b) why it matters for the thesis, (c) **specific URL / filing / source to verify against next sweep**. Roll forward unresolved gaps to Section 24 (Open Questions) with the source-to-check attached. Closes the loop sweep-to-sweep — each gap should either resolve or accumulate explicit ownership.
+16. **Gap assessment** — What would a hedge fund PM want that we couldn't find? For each gap: (a) what's missing, (b) why it matters for the thesis, (c) **specific URL / filing / source to verify against next sweep**, (d) **classify as REAL WALL or IMAGINED WALL per Rigor Floor section** — real walls (SEC redactions, genuinely-private terms before exhibit-filing) get documented and parked; imagined walls (403 errors, empty aggregator tables, calendar assumptions) MUST be re-attempted with the Workaround Library before being called a gap. Any gap labeled "imagined wall" at sweep-end is a methodology failure. Roll forward unresolved REAL-WALL gaps to Section 24 (Open Questions) with the source-to-check attached.
 17. **Recommended brief updates** — Proposed changes (do NOT apply until approved OR running as automated sweep)
 18. **Peer numeric snapshot** — Refresh latest reported revenue, ARR-under-contract / backlog, and HPC revenue mix for direct competitors: CoreWeave (CRWV), Nebius (NBIS), Applied Digital (APLD), Core Scientific (CORZ), TeraWulf (WULF), Hut 8 (HUT), Bitfarms (BITF), Cipher Mining (CIFR). Render as comparison table. Tag every cell per Analytical Standards epistemic tagging. Flag any peer with material delta vs prior sweep (new contract win, capacity announcement, guidance change, dilutive financing). This auto-refreshes Section 12 (Competitive landscape) on every sweep instead of monthly.
 19. **Under-priced bear case check** — Quarterly + post-earnings: refresh Section 13b. Is the consensus narrative still where it was last quarter? Has anything moved the gap between consensus and reality? If so, rewrite the section.
