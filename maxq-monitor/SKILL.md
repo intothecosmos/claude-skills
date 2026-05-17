@@ -79,8 +79,11 @@ For each monitoring sweep:
 1. **Run searches** — Execute Tier 1-3 queries minimum. Tier 4 monthly. Tier 5 bi-weekly.
 2. **Triage findings** — Classify each result as MATERIAL, NOTABLE, or NOISE using the rules below.
 3. **Assess second-order implications** — For every finding, ask: what does this mean for MAXQ specifically? Do not report news without connecting it to the thesis.
-4. **Update the research brief** — For MATERIAL findings, update the relevant sections, adjust scenario probabilities if warranted, and update the monitoring checklist.
+4. **Update the research brief** — Apply MATERIAL findings (thesis-altering) automatically. Also apply NOTABLE findings when they (a) correct a data error in the brief, (b) update a catalyst date / status, (c) refresh a peer-comp row or stock-price reading, or (d) close an open question. NOISE-only sweeps do not require brief edits. **The brief is the single source of truth — do not let it drift stale.**
 5. **Write an update summary** — At the top of the brief under Recent Updates, add a changelog entry with the date and a 1-2 sentence summary. Keep the 10 most recent entries visible. Move older entries to the Update Archive section at the bottom.
+6. **Write a sweep log** to `Investment Research/MAXQ Research/sweeps/SWEEP_YYYY-MM-DD.md` containing: queries run, findings classified, source URLs, gap-assessment, and brief edits proposed/applied. The sweep log is the durable audit trail — the brief inlines the conclusion, the sweep log shows the work.
+7. **HTML regeneration is MANDATORY whenever ANY brief content changes** — including NOTABLE corrections, catalyst-date slips, peer-comp updates, stock-price updates, freshness-stamp bumps that follow content changes. The HTML is the distribution format of the brief; if the markdown changed, the HTML is stale. Run via `maxq-html-regenerate`. The ONLY case to skip is when the sweep produced no brief edits at all (pure status-quo confirmations + sweep log only). **Never gate HTML regen on MATERIAL classification alone** — that produces drift between source markdown and distributed HTML.
+8. **Brief-section freshness stamps (MANDATORY):** every major brief section header (I. through XIV.) gets a `Last refresh: YYYY-MM-DD` line directly under it, updated whenever that section's content changes (not just the brief file's mtime). Sections not refreshed during a sweep keep their prior stamp — do NOT bump the stamp without a real content change. The top-of-brief "Last Updated" line is global mtime; section-level stamps are how a reader sees at-a-glance which sections are stale vs current.
 
 ### Classification Rules
 
@@ -157,8 +160,14 @@ If any of the following appear, flag prominently at the very top of the document
 NEVER acceptable as a final answer: "not yet synced", "WebFetch 403", "first reads not available", "would need to...", "calendar logic suggests no data yet". Exhaust workarounds before declaring a gap.
 
 **Workarounds:**
-- **SEDAR+ (Canadian filings):** `curl -A "Personal Research Project (mattdufton@gmail.com)" "https://www.sedarplus.ca/landingpage/"` then walk the issuer profile for MAXQ. WebFetch may fail on session-tokenized URLs — use curl with -L follow-redirects.
+- **SEDAR+ (Canadian filings):** SEDAR+ direct-document URLs (`sedarplus.ca/csa-party/records/document.html?id=...`) redirect to perfdrive captcha — both WebFetch and curl fail. Workaround: pull the same document from a mirror host. Verified working mirrors that bypass the captcha for MAXQ filings:
+  - `cdn.financialreports.eu/financialreports/media/filings/46349/...` (PDF, text-extractable via `pdfplumber`)
+  - `www.otcmarkets.com/filing-file/<UUID>/contents` (HTML, sometimes slow → 60s timeout)
+  - `newsfile.moomoo.com/public/NN-PersistNoticeAttachment/7781/...` (PDF, sometimes corrupted — try pdfplumber)
+  Find the mirror link via `WebSearch "Maritime Launch" <document type> SEDAR` — Google indexes the mirrors faster than it indexes SEDAR+ directly.
+- **SEDAR+ search landing page:** `https://www.sedarplus.ca/landingpage/search?keywords=Maritime+Launch+Services` — returns 200 via curl but is JS-rendered (the results table is loaded client-side, so curl returns only the shell). Use the mirror-search approach instead.
 - **SEDI (Canadian insider transactions):** `https://www.sedi.ca/sedi/SVTReportsAccessController` — searchable by issuer name. Use Bash + curl when WebFetch returns empty.
+- **PDF parsing:** when a primary-source PDF is downloaded (WebFetch saves the raw bytes when it can't render), extract text with `python3 -c "import pdfplumber; ..."`. Don't accept "binary PDF, can't read" as a gap.
 - **Mandated query enforcement:** if this skill specifies a query, RUN IT. Absence of a result = absence of the QUERY, not absence of the DATA. "First reads not available" is only acceptable if you actually ran the query.
 - **Aggregator empty table:** skip the aggregator (Finchat, Stockhouse, etc.); go to SEDAR+/SEDI/company IR page directly.
 - **Verification before relaying:** never relay a subagent's claim or a third-party aggregator's prose as fact without checking primary source. Subagent reports CAN be wrong; verification cost is low.
