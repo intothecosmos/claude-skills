@@ -292,6 +292,31 @@ Every sweep MUST produce:
 - Update the "Recent Updates" table (Section 3) with classified findings
 - Update "Monitoring Checklist" (Section 23) with last-run dates
 - **Brief-section freshness stamps (MANDATORY):** every brief section header gets a `Last refresh: YYYY-MM-DD` line directly under it, updated whenever that section's content changes (not just the brief file's mtime). Lets the reader see at a glance which sections are stale vs current. Sections not refreshed during a sweep keep their prior stamp — do NOT bump the stamp without a real content change.
+
+### Brief hygiene doctrine — MANDATORY on every edit
+
+These five rules address the systemic failure modes the 2026-05-18 audit surfaced. Every brief edit — whether MATERIAL, NOTABLE, or correction — runs this checklist before saving.
+
+1. **Stale-predecessor sweep (add-without-delete is forbidden).** When you add a refreshed block (new "Monthly Audit Summary," new dilution math, new probability set, new stock-price-anchored statement), GREP the rest of the brief for older versions of the same content and either delete them or replace them with a single `[SUPERSEDED YYYY-MM-DD — see <new location>]` line. Two co-existing blocks with contradictory numbers is the worst outcome — pick one. The May 16 IREN refresh failed this: Section 9 had two "Monthly Audit Mar 28" blocks with $6.74B vs $3.74B principal totals; Section 19 had a "+34% on 323M" block contradicting the corrected "+17% on 357.4M" block 50 lines above.
+
+2. **Cross-section reconciliation on any Dashboard-referenced metric change.** When ANY of these change in Section 1 Dashboard: share count, stock price, scenario probabilities, key catalyst dates (Sweetwater 1 energization month, NVDA earnings date), HBM cost trend, hyperscaler capex totals — IMMEDIATELY grep the rest of the brief for references and reconcile. The May 16 transcript correction to "Sweetwater 1 energized April 2026" wasn't propagated to Sections 11, 12, 21 — three places still said "DELIVERED MAY 1, 2026" until the 2026-05-18 audit.
+
+3. **Cross-reference verification (before publishing).** Before adding any "See Section X" or "See Open Question #Y" reference, VERIFY the target exists and addresses the claim. The 2026-05-18 MAXQ sweep added a Pillar 3 reference to "Open Question #9" and a CFO description reference to "Open Question #6" — but Q#9 was the Stifel question (unrelated to STARLIFT) and Q#6 was the RESOLVED cap-table question (unrelated to permanent CFO hiring). Either renumber the new item to a fresh Q# OR rewrite the reference as inline prose.
+
+4. **Brief self-documentation must mirror infrastructure state.** The brief's "Operational Reliability Notes" / Section XII / monitoring-checklist passages document what infrastructure exists and works. When you FIX infrastructure (e.g., correct `scheduled-tasks.json userSelectedFolders` paths), update the brief's self-documentation in the same edit pass. Don't let the brief continue to claim "scheduled-tasks.json paths still point to old `Building/MAXQ`" when you just fixed them.
+
+5. **Pre-publish internal consistency check (MANDATORY for every save).** Run this quick verification before declaring the edit complete:
+   - Top-of-doc `Last Updated:` line matches the latest section-level refresh stamp (or today's date for substantive edits)
+   - No duplicate dashboard rows (Section 1) — `grep -c "metric-name-text" SECTION_1` should equal 1
+   - Section 16 scenario probabilities consistent across (a) Scenario Probabilities header line, (b) each scenario sub-header `### Bear/Base/Bull/Blue Sky (X%)`, (c) Probability-Weighted Price Target calculation formula, (d) HTML chart `labels: [...]` array
+   - Section 16 Diluted Shares denominator consistent across all four scenarios (no Bear 500M / Blue Sky 520M mismatch)
+   - No stock-price-anchored statement (e.g. "Convert 4 is +18% ITM") older than the latest stock-price reference in Section 1 Dashboard
+   - Management Credibility (Section 21) hit rate denominator equals the count of unique rows in the table (after dedup), not the count of all rows including replaced predecessors
+   - Header text "Last Updated: <date>" matches the latest dated entry in Section 3 Recent Updates
+
+### Post-edit verification — `check-brief-html-sync.sh` semantic mode
+
+The PostToolUse hook `check-brief-html-sync.sh` runs in `--quiet` mode on every Edit/Write and catches MD/HTML mtime drift. Starting 2026-05-18 the hook also runs semantic checks documented above — if it emits anything, FIX before declaring the edit complete. Don't silence the hook; treat its output as load-bearing signal.
 - **Sandbox-fallback doctrine (MANDATORY when running as a scheduled task):** Claude Desktop's scheduled-task harness spawns each sweep in a sandboxed session whose filesystem is restricted to a temporary `outputs/` directory — the project brief folder (`Investment Research/IREN Research/`) is NOT mounted by default. When the sweep agent attempts to write to the brief or to `sweeps/SWEEP_YYYY-MM-DD.md` in that sandbox, it will silently fail or hit a permission error. The fallback protocol:
   1. **Detect the sandbox** — `ls /Users/mattdufton/Documents/Projects/Investment\ Research/IREN\ Research/` early in the sweep. If the directory isn't readable, you're sandboxed.
   2. **Write the sweep log to session outputs/** instead — `./outputs/SWEEP_YYYY-MM-DD.md` (the agent's CWD is its session outputs/ dir). The log content is unchanged from the normal-path version. Also write a companion `BRIEF_UPDATES_YYYY-MM-DD.md` with the proposed changelog block ready to paste into Section 3 of the brief.
